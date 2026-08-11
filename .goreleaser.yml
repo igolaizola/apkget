@@ -1,0 +1,14 @@
+builds:
+  - id: apkget
+    binary: apkget
+    main: ./cmd/apkget
+    goarch:
+      - amd64
+      - arm64
+      - arm
+archives:
+  - id: apkget
+    builds:
+      - apkget
+    format: zip
+    name_template: 'apkget_{{ .Version }}_{{- if eq .Os "darwin" }}macos{{- else }}{{ .Os }}{{ end }}_{{ .Arch }}'
