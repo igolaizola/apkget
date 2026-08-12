@@ -7,6 +7,8 @@
 *.dll
 *.so
 *.dylib
+*.xapk
+*.apk
 
 # Test binary, built with `go test -c`
 *.test
@@ -28,5 +30,12 @@ go.work.sum
 .env
 
 # Editor/IDE
-# .idea/
-# .vscode/
+.idea/
+.vscode/
+
+# Other
+.history
+.vscode
+*.conf
+*.yaml
+README.pdf
