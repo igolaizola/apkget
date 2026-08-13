@@ -55,6 +55,8 @@ func run(ctx context.Context, args []string) error {
 		return listVersions(ctx, args[1:])
 	case "logo":
 		return logo(ctx, args[1:])
+	case "reverse":
+		return reverse(ctx, args[1:])
 	case "sources":
 		for _, name := range apkget.NewDownloader(nil, nil).Sources() {
 			fmt.Println(name)
@@ -229,6 +231,100 @@ func logo(ctx context.Context, args []string) error {
 	return nil
 }
 
+func reverse(ctx context.Context, args []string) error {
+	fs := flag.NewFlagSet("reverse", flag.ContinueOnError)
+	output := fs.String("output", "", "output directory")
+	tools := fs.String("tools", "", "tool cache directory (default: $APKLAB_HOME or ~/.apklab)")
+	source := fs.String("source", "", "source to use when downloading an app")
+	versionFlag := fs.String("version", "", "exact version when downloading an app")
+	proxy := fs.String("proxy", "", "HTTP/SOCKS proxy URL")
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+	if fs.NArg() < 1 || fs.NArg() > 2 {
+		return errors.New("usage: apkget reverse [flags] <file.apk|file.apkx|file.xapk|file.apks|file.apkm|app-name|package-id> [output_dir]")
+	}
+	outputSet := false
+	fs.Visit(func(flag *flag.Flag) {
+		outputSet = outputSet || flag.Name == "output"
+	})
+	if fs.NArg() == 2 && outputSet {
+		return errors.New("cannot use positional output_dir together with -output")
+	}
+	outputDir := *output
+	if outputDir == "" && fs.NArg() == 2 {
+		outputDir = fs.Arg(1)
+	}
+	input := fs.Arg(0)
+	inputPath, cleanup, err := prepareReverseInput(ctx, input, *source, *versionFlag, *proxy)
+	if err != nil {
+		return err
+	}
+	defer cleanup()
+	if outputDir == "" && inputPath != input {
+		outputDir = filepath.Join(".", "reversed_"+strings.TrimSuffix(filepath.Base(inputPath), filepath.Ext(inputPath)))
+	}
+	client := apkget.NewHTTPClient(*proxy)
+	result, err := apkget.Reverse(ctx, inputPath, apkget.ReverseOptions{
+		OutputDir: outputDir,
+		ToolHome:  *tools,
+		Proxy:     *proxy,
+		Client:    client,
+	})
+	if err != nil {
+		return err
+	}
+	fmt.Fprintf(os.Stderr, "Done\nOutput: %s\n", result.OutputDir)
+	return nil
+}
+
+// prepareReverseInput keeps local files local and sends all other inputs
+// through the normal downloader, which supports both app names and package IDs.
+func prepareReverseInput(ctx context.Context, input, source, version, proxy string) (string, func(), error) {
+	info, err := os.Stat(input)
+	if err == nil {
+		if info.IsDir() {
+			return "", func() {}, fmt.Errorf("input is a directory: %s", input)
+		}
+		return input, func() {}, nil
+	}
+	if !os.IsNotExist(err) {
+		return "", func() {}, fmt.Errorf("stat input: %w", err)
+	}
+	if isAPKInputPath(input) {
+		return "", func() {}, fmt.Errorf("input file not found: %s", input)
+	}
+
+	temporaryDir, err := os.MkdirTemp("", "apkget-reverse-download-*")
+	if err != nil {
+		return "", func() {}, fmt.Errorf("create download workspace: %w", err)
+	}
+	cleanup := func() { _ = os.RemoveAll(temporaryDir) }
+	client := apkget.NewHTTPClient(proxy)
+	fmt.Fprintf(os.Stderr, "Downloading %s before decompilation...\n", input)
+	result, err := apkget.NewDownloader(client, nil).Download(ctx, input, apkget.Options{
+		OutputDir: temporaryDir,
+		Source:    source,
+		Version:   version,
+		Proxy:     proxy,
+		Client:    client,
+	})
+	if err != nil {
+		cleanup()
+		return "", func() {}, fmt.Errorf("download app: %w", err)
+	}
+	return result.Path, cleanup, nil
+}
+
+func isAPKInputPath(input string) bool {
+	switch strings.ToLower(filepath.Ext(input)) {
+	case ".apk", ".apkx", ".xapk", ".apks", ".apkm":
+		return true
+	default:
+		return false
+	}
+}
+
 func usage() {
 	fmt.Fprintln(os.Stderr, `apkget downloads Android packages from public APK sources.
 
@@ -236,6 +332,7 @@ Usage:
   apkget [flags] <app-name|package-id>
   apkget list [flags] <app-name|package-id>
   apkget logo [flags] <app-name|package-id>
+  apkget reverse [flags] <file.apk|file.apkx|file.xapk|file.apks|file.apkm|app-name|package-id> [output_dir]
   apkget sources
 
 The app name is resolved to a package ID using Google Play search. A package ID

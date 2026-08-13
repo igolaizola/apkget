@@ -39,6 +39,9 @@ apkget sources
 apkget list -source apkpure tiktok
 apkget list org.telegram.messenger
 apkget logo -output ./logos telegram
+apkget reverse -output ./decompiled/telegram ./apks/org.telegram.messenger-latest.xapk
+apkget reverse -output ./decompiled/tiktok tiktok
+apkget reverse -source apkpure -version 12.9.2 -output ./decompiled/telegram org.telegram.messenger
 ```
 
 `list` emits pretty-printed JSON grouped by source and does not download an artifact. It is the inspection command for an app name or package ID; each source contains a `versions` array. Use a returned `source` and one of its versions with `-source` and `-version` to select a specific entry.
@@ -46,6 +49,8 @@ apkget logo -output ./logos telegram
 `-output` accepts either an output directory or an explicit output file path. The download command shows a terminal progress bar with percentage, speed, and ETA when attached to an interactive terminal. It stays quiet when output is redirected or otherwise not attached to a terminal.
 
 `logo` resolves the app through Google Play and downloads its icon without downloading the APK. The `-output` value may be an output directory or an image file path.
+
+`reverse` accepts a local APK, APKX, XAPK, APKS, or APKM file, an app name, or a package ID. App names and package IDs go through the normal download flow first. It downloads pinned Apktool and JADX releases to `$APKLAB_HOME` (or `~/.apklab` when unset), selects the primary APK from a bundle, and writes Apktool output plus deobfuscated JADX source to the output directory. Java must be installed and available in `PATH`.
 
 ## 🧭 Providers
 
