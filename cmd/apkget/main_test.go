@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"testing"
@@ -61,5 +62,44 @@ func TestMoveFile(t *testing.T) {
 	}
 	if _, err := os.Stat(source); !os.IsNotExist(err) {
 		t.Fatalf("source still exists or returned unexpected error: %v", err)
+	}
+}
+
+func TestPrepareReverseInputKeepsLocalFile(t *testing.T) {
+	root := t.TempDir()
+	path := filepath.Join(root, "sample.apk")
+	if err := os.WriteFile(path, []byte("apk"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	got, cleanup, err := prepareReverseInput(context.Background(), path, "", "", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	cleanup()
+	if got != path {
+		t.Fatalf("input path = %q, want %q", got, path)
+	}
+}
+
+func TestIsAPKInputPath(t *testing.T) {
+	for _, extension := range []string{".apk", ".apkx", ".xapk", ".apks", ".apkm", ".APK"} {
+		if !isAPKInputPath("app" + extension) {
+			t.Errorf("isAPKInputPath rejected %s", extension)
+		}
+	}
+	if isAPKInputPath("telegram") {
+		t.Error("isAPKInputPath accepted an app name")
+	}
+}
+
+func TestReverseRejectsConflictingOutputArguments(t *testing.T) {
+	root := t.TempDir()
+	input := filepath.Join(root, "sample.apk")
+	if err := os.WriteFile(input, []byte("apk"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := reverse(context.Background(), []string{"-output", filepath.Join(root, "one"), input, filepath.Join(root, "two")}); err == nil {
+		t.Fatal("reverse accepted both -output and positional output_dir")
 	}
 }
