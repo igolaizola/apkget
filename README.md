@@ -7,6 +7,7 @@
 - 🔎 Resolve app names to package IDs automatically.
 - 🧭 Choose a provider and version explicitly, or use automatic fallback.
 - 📦 Preserve APK, XAPK, APKS, and APKM artifacts as downloaded.
+- 🔬 Reverse engineer APKs with Apktool and JADX to explore resources, smali, and source code.
 - 🛡️ Download with SHA-256 verification and no browser automation.
 
 ## 📥 Installation
@@ -39,9 +40,6 @@ apkget sources
 apkget list -source apkpure tiktok
 apkget list org.telegram.messenger
 apkget logo -output ./logos telegram
-apkget reverse -output ./decompiled/telegram ./apks/org.telegram.messenger-latest.xapk
-apkget reverse -output ./decompiled/tiktok tiktok
-apkget reverse -source apkpure -version 12.9.2 -output ./decompiled/telegram org.telegram.messenger
 ```
 
 `list` emits pretty-printed JSON grouped by source and does not download an artifact. It is the inspection command for an app name or package ID; each source contains a `versions` array. Use a returned `source` and one of its versions with `-source` and `-version` to select a specific entry.
@@ -50,7 +48,24 @@ apkget reverse -source apkpure -version 12.9.2 -output ./decompiled/telegram org
 
 `logo` resolves the app through Google Play and downloads its icon without downloading the APK. The `-output` value may be an output directory or an image file path.
 
-`reverse` accepts a local APK, APKX, XAPK, APKS, or APKM file, an app name, or a package ID. App names and package IDs go through the normal download flow first. It downloads pinned Apktool and JADX releases to `$APKLAB_HOME` (or `~/.apklab` when unset), selects the primary APK from a bundle, and writes Apktool output plus deobfuscated JADX source to the output directory. Java must be installed and available in `PATH`.
+## 🔬 Reverse engineer APKs
+
+`reverse` uses Apktool and JADX to extract resources, smali, and deobfuscated source from a local APK, app name, or package ID:
+
+```sh
+# Reverse engineer a local APK or bundle.
+apkget reverse -output ./reversed/telegram ./apks/org.telegram.messenger-latest.xapk
+
+# Download the app first, then reverse engineer it.
+apkget reverse -output ./reversed/tiktok tiktok
+apkget reverse -source apkpure -version 12.9.2 -output ./reversed/telegram org.telegram.messenger
+```
+
+Apktool writes to the output directory; JADX writes source to `java_src`. APK bundles are not merged; the primary APK is selected automatically.
+
+Pinned Apktool and JADX releases are downloaded, verified, and cached in `$APKLAB_HOME` or `~/.apklab`.
+
+⚠️ Java must be installed and available in `PATH`.
 
 ## 🧭 Providers
 
@@ -101,3 +116,16 @@ make build
 ```
 
 The source implementations are ports/adaptations of the public workflows in [EFForg/apkeep](https://github.com/EFForg/apkeep) and [TheQmaks/justapk](https://github.com/TheQmaks/justapk). This project remains under its existing repository license; review upstream licenses before redistributing derived source code.
+
+## 📬 Contact
+
+Feel free to reach out to me at [igolaizola.com/#contact](https://igolaizola.com/#contact)
+
+Join my Telegram group for support and collaboration: [t.me/igohub](https://t.me/igohub)
+
+Or connect directly with me on:
+
+- Telegram: [t.me/igolaizola](https://t.me/igolaizola)
+- X/Twitter: [x.com/igolaizola](https://x.com/igolaizola)
+- LinkedIn: [linkedin.com/in/igolaizola](https://linkedin.com/in/igolaizola)
+- GitHub: [github.com/igolaizola](https://github.com/igolaizola)
