@@ -12,6 +12,7 @@ import (
 	"os/signal"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/igolaizola/apkget"
 )
@@ -81,14 +82,19 @@ func download(ctx context.Context, command string, args []string) error {
 	source := fs.String("source", "", "source to use (default: automatic fallback)")
 	versionFlag := fs.String("version", "", "exact version")
 	proxy := fs.String("proxy", "", "HTTP/SOCKS proxy URL")
+	timeout := fs.Int("timeout", int(apkget.DefaultTimeout/time.Second), "download timeout in seconds")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
 	if fs.NArg() != 1 {
 		return errors.New("usage: " + usageName + " [flags] <app-name|package-id>")
 	}
+	if *timeout <= 0 {
+		return errors.New("timeout must be greater than 0 seconds")
+	}
 	query := fs.Arg(0)
-	client := apkget.NewHTTPClient(*proxy)
+	timeoutValue := time.Duration(*timeout) * time.Second
+	client := apkget.NewHTTPClientWithTimeout(*proxy, timeoutValue)
 	// Resolve names before creating the output staging directory; failed
 	// searches should not leave any filesystem artifacts behind.
 	packageID, err := apkget.ResolvePackageID(ctx, query, client)
@@ -114,7 +120,7 @@ func download(ctx context.Context, command string, args []string) error {
 	}
 	result, err := apkget.NewDownloader(client, nil).Download(ctx, packageID, apkget.Options{
 		OutputDir: outputDir, Source: *source, Version: *versionFlag,
-		Proxy: *proxy, Client: client,
+		Proxy: *proxy, Client: client, Timeout: timeoutValue,
 	})
 	if err != nil {
 		return err

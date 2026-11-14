@@ -20,6 +20,10 @@ import (
 
 const defaultUserAgent = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
 
+// DefaultTimeout bounds how long one HTTP request may take, including
+// reading the download body. Slow connections may need a larger value.
+const DefaultTimeout = 120 * time.Second
+
 func defaultClient(client *http.Client) *http.Client {
 	if client != nil {
 		return client
@@ -29,19 +33,30 @@ func defaultClient(client *http.Client) *http.Client {
 	return NewHTTPClient("")
 }
 
-// NewHTTPClient creates the default TLS-impersonating HTTP client. If proxy
-// is non-empty, it must be a URL supported by enetx/surf.
+// NewHTTPClient creates the default TLS-impersonating HTTP client with
+// DefaultTimeout. If proxy is non-empty, it must be a URL supported by
+// enetx/surf.
 func NewHTTPClient(proxy string) *http.Client {
+	return NewHTTPClientWithTimeout(proxy, DefaultTimeout)
+}
+
+// NewHTTPClientWithTimeout is NewHTTPClient with an explicit per-request
+// timeout. Values <= 0 fall back to DefaultTimeout so a bad value never
+// produces a client that waits forever.
+func NewHTTPClientWithTimeout(proxy string, timeout time.Duration) *http.Client {
+	if timeout <= 0 {
+		timeout = DefaultTimeout
+	}
 	// surf supplies the TLS/client fingerprint used by sites that reject a
 	// plain net/http client. Proxy configuration is applied before building it.
-	builder := surf.NewClient().Builder().Timeout(45 * time.Second).Impersonate().Chrome()
+	builder := surf.NewClient().Builder().Timeout(timeout).Impersonate().Chrome()
 	if proxy = strings.TrimSpace(proxy); proxy != "" {
 		builder = builder.Proxy(g.String(proxy))
 	}
 	if built := builder.Build(); built.IsOk() {
 		return built.Ok().Std()
 	}
-	return &http.Client{Timeout: 45 * time.Second}
+	return &http.Client{Timeout: timeout}
 }
 
 func newRequest(ctx context.Context, method, rawURL string, headers http.Header) (*http.Request, error) {
