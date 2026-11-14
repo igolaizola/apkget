@@ -3,6 +3,7 @@ package apkget
 import (
 	"context"
 	"net/http"
+	"time"
 )
 
 // AppInfo describes an application returned by a source search.
@@ -52,11 +53,12 @@ type Source interface {
 
 // Options controls a download operation.
 type Options struct {
-	OutputDir      string       // Directory where the provider artifact is written.
-	Source         string       // Optional provider name; empty means fallback order.
-	Version        string       // Optional exact version requested from the provider.
-	Proxy          string       // Optional HTTP/SOCKS proxy URL.
-	Client         *http.Client // Optional custom client; takes precedence over Proxy.
-	UserAgent      string       // Optional User-Agent applied to provider requests.
-	DownloadHeader http.Header  // Additional headers applied to provider requests.
+	OutputDir      string        // Directory where the provider artifact is written.
+	Source         string        // Optional provider name; empty means fallback order.
+	Version        string        // Optional exact version requested from the provider.
+	Proxy          string        // Optional HTTP/SOCKS proxy URL.
+	Client         *http.Client  // Optional custom client; takes precedence over Proxy.
+	UserAgent      string        // Optional User-Agent applied to provider requests.
+	DownloadHeader http.Header   // Additional headers applied to provider requests.
+	Timeout        time.Duration // Optional per-request timeout, including the download body. Values <= 0 keep the client timeout.
 }

@@ -135,6 +135,13 @@ func (d *Downloader) Download(ctx context.Context, query string, opts Options) (
 			client = NewHTTPClient(opts.Proxy)
 		}
 	}
+	if opts.Timeout > 0 {
+		// Copy instead of mutate: the selected client may be shared with the
+		// caller or with other downloads served by this Downloader.
+		withTimeout := *client
+		withTimeout.Timeout = opts.Timeout
+		client = &withTimeout
+	}
 	ctx = withDownloadSettings(ctx, downloadSettings{
 		// Request settings travel through context because Source.Download has
 		// a deliberately small interface and cannot accept Options directly.

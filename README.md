@@ -91,7 +91,14 @@ apkget -proxy http://user:password@proxy.example:8080 tiktok
 apkget list -proxy socks5://127.0.0.1:1080 telegram
 ```
 
-Library users can call `apkget.NewHTTPClient(proxyURL)` or set `Options.Proxy`.
+Downloads use a 120 second request timeout by default. Raise it on slow
+connections with `-timeout`, in seconds:
+
+```sh
+apkget -timeout 300 tiktok
+```
+
+Library users can call `apkget.NewHTTPClient(proxyURL)` or set `Options.Proxy`, and set `Options.Timeout` to override the client timeout.
 
 ## 📚 Library
 
